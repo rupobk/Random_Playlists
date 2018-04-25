@@ -28,6 +28,7 @@ namespace Random_Playlist
             string playlistName = null;
             var mediaType = MediaType.Unknown;
             var recurseFolders = false;
+            var randomOrderPlaylist = false;
             var maxLength = 0;
 
             for (var i = 0; i < args.Length; i++)
@@ -68,6 +69,9 @@ namespace Random_Playlist
                                 Console.WriteLine($"Unknown media type specified: {args[i]}");
                                 return;
                             }
+                            break;
+                        case "-u":
+                            randomOrderPlaylist = true;
                             break;
                         case "-m":
                             //max length
@@ -143,88 +147,115 @@ namespace Random_Playlist
 
             try
             {
-                var files = new List<string>();
-                foreach (var folder in folders)
+                if (randomOrderPlaylist)
+                // Wiedergabelisten neu mischen
                 {
-                    var thisFolderFiles = Directory.EnumerateFiles(folder, "*", recurseFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
-                    //if (playlistFolder == folder && !alwaysUseAbsolutePath) {
-                    //    //use relative file name if the file is in the same folder as the playlist
-                    //    thisFolderFiles = thisFolderFiles.Select(f => Path.GetFileName(f));
-                    //}
-                    files.AddRange(thisFolderFiles.ToList<string>());
-                }
-                if (mediaType == MediaType.Unknown)
-                {
-                    foreach (var file in files)
+                    // Wiedergabelisten finden
+                    var files = new List<string>();
+                    foreach (var folder in folders)
                     {
-                        //figure out what kind of files these are
-                        var ext = Path.GetExtension(file);
-                        if (AudioFileTypes.Contains(ext))
+                        var thisFolderFiles = Directory.EnumerateFiles(folder, "*.m3u", recurseFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+                        files.AddRange(thisFolderFiles.ToList<string>());
+                    }
+                    foreach (var f in files)
+                    {
+                        // neu sortieren u. Kopie machen
+                        var zeilen = new List<string>();
+                        string line = "";
+                        System.IO.StreamReader file = new System.IO.StreamReader(f.ToString());
+                        while ((line = file.ReadLine()) != null)
                         {
-                            mediaType = MediaType.Audio;
-                            break;
+                            if (line.Substring(1, 1) != "#")
+                                zeilen.Add(line);
                         }
-                        else if (VideoFileTypes.Contains(ext))
-                        {
-                            mediaType = MediaType.Video;
-                            break;
-                        }
+                        file.Close();
+                        var rnd = new Random();
+                        zeilen = zeilen.OrderBy(x => rnd.Next()).ToList<string>();
+                        string neueDatei = f.ToString().Substring(0, f.Length - 4) + "_rnd" + f.ToString().Substring(f.Length - 4, 4);
+                        File.WriteAllLines(neueDatei, zeilen);
+                    }
+                }
+                else
+                {
+                    var files = new List<string>();
+                    foreach (var folder in folders)
+                    {
+                        var thisFolderFiles = Directory.EnumerateFiles(folder, "*", recurseFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+                        files.AddRange(thisFolderFiles.ToList<string>());
                     }
                     if (mediaType == MediaType.Unknown)
                     {
-                        //still can't figure it out
-                        Console.WriteLine("The folders specified don't contain any media files.");
-                        ShowHelp();
-                        return;
-                    }
-                }
-
-                switch (mediaType)
-                {
-                    case MediaType.Audio:
-                        //zuerst nur Audio-Dateien filtern u. Rest weglöschen
-                        files = files.Where(f => AudioFileTypes.Contains(Path.GetExtension(f).ToLower())).ToList<string>();
-                        //jetzt -e Verzeichnisse weglöschen
-                        //todo: laurin fragen
-                        if (foldersexcl.Count > 0)
+                        foreach (var file in files)
                         {
-                            var files2 = new List<string>(files);
-                            foreach (var file in files2)
+                            //figure out what kind of files these are
+                            var ext = Path.GetExtension(file);
+                            if (AudioFileTypes.Contains(ext))
                             {
-                                foreach (var folder in foldersexcl)
+                                mediaType = MediaType.Audio;
+                                break;
+                            }
+                            else if (VideoFileTypes.Contains(ext))
+                            {
+                                mediaType = MediaType.Video;
+                                break;
+                            }
+                        }
+                        if (mediaType == MediaType.Unknown)
+                        {
+                            //still can't figure it out
+                            Console.WriteLine("The folders specified don't contain any media files.");
+                            ShowHelp();
+                            return;
+                        }
+                    }
+
+                    switch (mediaType)
+                    {
+                        case MediaType.Audio:
+                            //zuerst nur Audio-Dateien filtern u. Rest weglöschen
+                            files = files.Where(f => AudioFileTypes.Contains(Path.GetExtension(f).ToLower())).ToList<string>();
+
+                            //jetzt -e Verzeichnisse weglöschen
+                            if (foldersexcl.Count > 0)
+                            {
+                                var files2 = new List<string>(files);
+                                foreach (var file in files2)
                                 {
-                                    if (file.ToLower().Contains(folder.ToLower()))
+                                    foreach (var folder in foldersexcl)
                                     {
-                                        files.Remove(file);
-                                        break;
+                                        if (file.ToLower().Contains(folder.ToLower()))
+                                        {
+                                            files.Remove(file);
+                                            break;
+                                        }
                                     }
                                 }
                             }
-                        }
-                        break;
-                    case MediaType.Video:
-                        files = files.Where(f => VideoFileTypes.Contains(Path.GetExtension(f).ToLower())).ToList<string>();
-                        break;
-                    case MediaType.Custom:
-                        files = files.Where(f => CustomFileTypes.Contains(Path.GetExtension(f).ToLower())).ToList<string>();
-                        break;
-                }
+                            break;
+                        case MediaType.Video:
+                            files = files.Where(f => VideoFileTypes.Contains(Path.GetExtension(f).ToLower())).ToList<string>();
+                            break;
+                        case MediaType.Custom:
+                            files = files.Where(f => CustomFileTypes.Contains(Path.GetExtension(f).ToLower())).ToList<string>();
+                            break;
+                    }
 
-                var rnd = new Random();
-                files = files.OrderBy(x => rnd.Next()).ToList<string>();
+                    var rnd = new Random();
+                    files = files.OrderBy(x => rnd.Next()).ToList<string>();
 
-                if (maxLength > 0)
-                {
-                    files = files.Take(maxLength).ToList<string>();
-                }
+                    if (maxLength > 0)
+                    {
+                        files = files.Take(maxLength).ToList<string>();
+                    }
 
-                if (File.Exists(playlistName))
-                {
-                    File.Delete(playlistName);
+                    if (File.Exists(playlistName))
+                    {
+                        File.Delete(playlistName);
+                    }
+                    File.WriteAllLines(playlistName, files);
+                    Console.WriteLine($"Successfully created {playlistName}");
+                    Console.ReadKey();
                 }
-                File.WriteAllLines(playlistName, files);
-                Console.WriteLine($"Successfully created {playlistName}");
-                Console.ReadKey();
             }
             catch (Exception e)
             {
@@ -258,6 +289,7 @@ Random.Playlist.exe [-d folder1 folder2] [-p playlistName] [-r] [-t audio|video]
         e.g. -x m4a;wav
   -i    A list of file extensions to include, separated by semicolons.
         All other files will be ignored. e.g. -i mp3;m4a
+  -u    Search playlists and change order of titles in random way
   -h    Show this help screen
 ");
             //todo: Laurin fragen wegen Adaptierung: Random in vorhandenen Playlisten machen

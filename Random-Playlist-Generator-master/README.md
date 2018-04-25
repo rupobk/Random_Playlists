@@ -14,6 +14,7 @@ Random.Playlist.exe [-d folder1 folder2] [-p playlistName] [-r] [-t audio|video]
 
   -d    A list of folders to include, separated by spaces.
         If this is not included, the current folder is used.
+  -e    A list of folders to exclude, separated by spaces.
   -p    The name of the playlist file. If not specified,
         the playlist will be named after the first folder being searched,
         preceded by the word Random. e.g. Random Music.m3u

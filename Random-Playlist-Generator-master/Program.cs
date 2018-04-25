@@ -5,20 +5,24 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 
-namespace Random_Playlist {
-    enum MediaType {
+namespace Random_Playlist
+{
+    enum MediaType
+    {
         Audio,
         Video,
         Custom,
         Unknown
     }
 
-    class Program {
+    class Program
+    {
         static readonly List<string> AudioFileTypes = new List<string> { ".aa", ".aac", ".aax", ".act", ".aiff", ".amr", ".ape", ".au", ".awb", ".dct", ".dss", ".dvf", ".flac", ".gsm", ".ikla", ".ivs", ".m4a", ".m4b", ".m4p", ".mmf", ".mp3", ".mpc", ".msv", ".oga", ".ogg", ".opus", ".ra,", ".raw", ".rm", ".sln", ".tta", ".vox", ".wav", ".webm", ".wma", ".wv" };
         static readonly List<string> VideoFileTypes = new List<string> { ".3g2", ".3gp", ".amv", ".asf", ".avi", ".drc", ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".m2v", ".m4p", ".m4v", ".m4v", ".mkv", ".mng", ".mov", ".mp2", ".mp4", ".mpe", ".mpeg", ".mpeg", ".mpg", ".mpg", ".mpv", ".mxf", ".nsv", ".ogg", ".ogv", ".qt", ".rm", ".rmvb", ".roq", ".svi", ".vob", ".webm", ".wmv", ".yuv" };
         static List<string> CustomFileTypes = null;
 
-        static void Main(string[] args) {
+        static void Main(string[] args)
+        {
             var folders = new List<string>();
             var foldersexcl = new List<string>();
             string playlistName = null;
@@ -26,12 +30,16 @@ namespace Random_Playlist {
             var recurseFolders = false;
             var maxLength = 0;
 
-            for (var i = 0; i < args.Length; i++) {
-                if (args[i].StartsWith("-")) {
-                    switch (args[i]) {
+            for (var i = 0; i < args.Length; i++)
+            {
+                if (args[i].StartsWith("-"))
+                {
+                    switch (args[i])
+                    {
                         case "-d":
                             //include folder list
-                            for (var x = i + 1; x < args.Length; x++) {
+                            for (var x = i + 1; x < args.Length; x++)
+                            {
                                 if (args[x].StartsWith("-")) break;
                                 i++;
                                 folders.Add(args[x]);
@@ -55,7 +63,8 @@ namespace Random_Playlist {
                             if (mediaType != MediaType.Unknown) break;
                             if (args[i].Equals("audio", StringComparison.OrdinalIgnoreCase)) mediaType = MediaType.Audio;
                             else if (args[i].Equals("video", StringComparison.OrdinalIgnoreCase)) mediaType = MediaType.Video;
-                            else {
+                            else
+                            {
                                 Console.WriteLine($"Unknown media type specified: {args[i]}");
                                 return;
                             }
@@ -63,7 +72,8 @@ namespace Random_Playlist {
                         case "-m":
                             //max length
                             i++;
-                            if (!int.TryParse(args[i], out maxLength)) {
+                            if (!int.TryParse(args[i], out maxLength))
+                            {
                                 Console.WriteLine($"Unknown max length format: {args[i]}");
                                 return;
                             }
@@ -72,11 +82,15 @@ namespace Random_Playlist {
                             //exclude file types
                             i++;
                             var exts = args[i].Split(';');
-                            foreach (var ext in exts) {
-                                if (ext.StartsWith(".")) {
+                            foreach (var ext in exts)
+                            {
+                                if (ext.StartsWith("."))
+                                {
                                     AudioFileTypes.Remove(ext);
                                     VideoFileTypes.Remove(ext);
-                                } else {
+                                }
+                                else
+                                {
                                     var dotext = $".{ext}";
                                     AudioFileTypes.Remove(dotext);
                                     VideoFileTypes.Remove(dotext);
@@ -88,8 +102,10 @@ namespace Random_Playlist {
                             i++;
                             mediaType = MediaType.Custom;
                             CustomFileTypes = args[i].Split(';').ToList();
-                            for (var x = 0; x < CustomFileTypes.Count; x++) {
-                                if (!CustomFileTypes[x].StartsWith(".")) {
+                            for (var x = 0; x < CustomFileTypes.Count; x++)
+                            {
+                                if (!CustomFileTypes[x].StartsWith("."))
+                                {
                                     CustomFileTypes[x] = $".{CustomFileTypes[x]}";
                                 }
                             }
@@ -102,7 +118,9 @@ namespace Random_Playlist {
                             ShowHelp();
                             return;
                     }
-                } else {
+                }
+                else
+                {
                     if (folders.Count == 0) folders.Add(args[i].TrimEnd('\\'));
                     else playlistName = args[i];
                 }
@@ -114,36 +132,46 @@ namespace Random_Playlist {
             if (!playlistName.EndsWith(".m3u", StringComparison.OrdinalIgnoreCase)) playlistName = $"{playlistName}.m3u";
             var playlistFolder = Path.GetDirectoryName(playlistName);
 
-            foreach (var folder in folders) {
-                if (!Directory.Exists(folder)) {
+            foreach (var folder in folders)
+            {
+                if (!Directory.Exists(folder))
+                {
                     Console.WriteLine($"Cannot find folder {folder}");
                     return;
                 }
             }
 
-            try {
-                var files = Enumerable.Empty<string>();
-                foreach (var folder in folders) {
+            try
+            {
+                var files = new List<string>();
+                foreach (var folder in folders)
+                {
                     var thisFolderFiles = Directory.EnumerateFiles(folder, "*", recurseFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
                     //if (playlistFolder == folder && !alwaysUseAbsolutePath) {
                     //    //use relative file name if the file is in the same folder as the playlist
                     //    thisFolderFiles = thisFolderFiles.Select(f => Path.GetFileName(f));
                     //}
-                    files = files.Concat(thisFolderFiles);
+                    files.AddRange(thisFolderFiles.ToList<string>());
                 }
-                if (mediaType == MediaType.Unknown) {
-                    foreach (var file in files) {
+                if (mediaType == MediaType.Unknown)
+                {
+                    foreach (var file in files)
+                    {
                         //figure out what kind of files these are
                         var ext = Path.GetExtension(file);
-                        if (AudioFileTypes.Contains(ext)) {
+                        if (AudioFileTypes.Contains(ext))
+                        {
                             mediaType = MediaType.Audio;
                             break;
-                        } else if (VideoFileTypes.Contains(ext)) {
+                        }
+                        else if (VideoFileTypes.Contains(ext))
+                        {
                             mediaType = MediaType.Video;
                             break;
                         }
                     }
-                    if (mediaType == MediaType.Unknown) {
+                    if (mediaType == MediaType.Unknown)
+                    {
                         //still can't figure it out
                         Console.WriteLine("The folders specified don't contain any media files.");
                         ShowHelp();
@@ -151,42 +179,63 @@ namespace Random_Playlist {
                     }
                 }
 
-                switch (mediaType) {
+                switch (mediaType)
+                {
                     case MediaType.Audio:
                         //zuerst nur Audio-Dateien filtern u. Rest weglöschen
-                        files = files.Where(f => AudioFileTypes.Contains(Path.GetExtension(f)));
+                        files = files.Where(f => AudioFileTypes.Contains(Path.GetExtension(f).ToLower())).ToList<string>();
                         //jetzt -e Verzeichnisse weglöschen
                         //todo: laurin fragen
-                        //if (foldersexcl.Count > 0)
-                        //    files = files.Where(f => foldersexcl.Contains(f)));
+                        if (foldersexcl.Count > 0)
+                        {
+                            var files2 = new List<string>(files);
+                            foreach (var file in files2)
+                            {
+                                foreach (var folder in foldersexcl)
+                                {
+                                    if (file.ToLower().Contains(folder.ToLower()))
+                                    {
+                                        files.Remove(file);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
                         break;
                     case MediaType.Video:
-                        files = files.Where(f => VideoFileTypes.Contains(Path.GetExtension(f)));
+                        files = files.Where(f => VideoFileTypes.Contains(Path.GetExtension(f).ToLower())).ToList<string>();
                         break;
                     case MediaType.Custom:
-                        files = files.Where(f => CustomFileTypes.Contains(Path.GetExtension(f)));
+                        files = files.Where(f => CustomFileTypes.Contains(Path.GetExtension(f).ToLower())).ToList<string>();
                         break;
                 }
 
                 var rnd = new Random();
-                files = files.OrderBy(x => rnd.Next());
+                files = files.OrderBy(x => rnd.Next()).ToList<string>();
 
-                if (maxLength > 0) {
-                    files = files.Take(maxLength);
+                if (maxLength > 0)
+                {
+                    files = files.Take(maxLength).ToList<string>();
                 }
 
-                if (File.Exists(playlistName)) {
+                if (File.Exists(playlistName))
+                {
                     File.Delete(playlistName);
                 }
                 File.WriteAllLines(playlistName, files);
                 Console.WriteLine($"Successfully created {playlistName}");
-            } catch (Exception e) {
+                Console.ReadKey();
+            }
+            catch (Exception e)
+            {
                 Console.WriteLine(e.Message);
+                Console.ReadKey();
                 return;
             }
         }
 
-        static void ShowHelp() {
+        static void ShowHelp()
+        {
             Console.WriteLine(@"
 Generate a random M3U playlist.
 
